@@ -2,9 +2,9 @@ modules = ["python-3.11"]
 run = "python -m venv .venv && .venv/bin/python -m pip install -r requirements.txt && .venv/bin/python start.py"
 
 [deployment]
-build = ["sh", "-c", "python -m venv .venv && .venv/bin/python -m pip install -r requirements.txt"]
+build = ["sh", "-c", "python -m venv .venv && .venv/bin/pip install -r requirements.txt"]
 run = ["sh", "-c", ".venv/bin/python start.py"]
-deploymentTarget = "cloudrun"
+deploymentTarget = "autoscale"
 
 [[ports]]
 localPort = 5000
