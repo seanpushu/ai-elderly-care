@@ -1,8 +1,8 @@
 modules = ["python-3.11"]
-run = "python -m venv .venv && .venv/bin/python -m pip install -r requirements.txt && .venv/bin/python start.py"
+run = "python -m venv .venv && .venv/bin/python -m pip install --no-user -r requirements.txt && .venv/bin/python start.py"
 
 [deployment]
-build = ["sh", "-c", "python -m venv .venv && .venv/bin/pip install -r requirements.txt"]
+build = ["sh", "-c", "python -m venv .venv && .venv/bin/python -m pip install --no-user -r requirements.txt"]
 run = ["sh", "-c", ".venv/bin/python start.py"]
 deploymentTarget = "autoscale"
 
@@ -40,5 +40,5 @@ outputType = "webview"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "PORT=5000 python start.py"
+args = "python -m venv .venv && .venv/bin/python -m pip install --no-user -r requirements.txt && PORT=5000 .venv/bin/python start.py"
 waitForPort = 5000
