@@ -1,3 +1,94 @@
 <!doctype html>
-<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Verify with someone you trust | PausePal</title><link rel="stylesheet" href="/static/verify.css"><script src="/static/verify.js" defer></script></head>
-<body><main><a href="/">← PausePal</a><p class="eyebrow">TAKE THE NEXT STEP</p><h1>Verify before you act.</h1><p class="intro">Use a contact you knew before this message arrived. A number in the suspicious message is not a trusted contact.</p><ol><li>Pause the request.</li><li>Use a contact you already know.</li><li>Confirm the request before taking action.</li></ol><section><h2>Your trusted contact</h2><p>Stored only in this browser tab's session. Never sent for analysis.</p><form id="contact-form"><label for="name">Contact name</label><input id="name" required maxlength="80" autocomplete="off"><label for="phone">Phone number</label><input id="phone" type="tel" required maxlength="30" autocomplete="off" placeholder="Use a number you already trust"><div class="actions"><button type="submit">Save contact</button><button id="clear" type="button" class="secondary">Clear contact</button></div></form><p id="contact-status" role="status" aria-live="polite"></p><a id="call" hidden>Open phone dialer</a></section><section><h2>What to say</h2><p id="script">I received an urgent request that claims to be from you. Did you send it?</p><button id="copy" type="button">Copy verification message</button><p id="copy-status" role="status" aria-live="polite"></p><p class="note">Opening the dialer or copying this message does not confirm anyone's identity. PausePal does not send messages or make calls automatically.</p></section></main></body></html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Verify before you act | PausePal</title>
+  <link rel="stylesheet" href="/static/verify.css">
+  <script src="/static/verify.js" defer></script>
+</head>
+<body>
+  <main>
+    <a href="/" class="back-link">← Back to PausePal</a>
+
+    <p class="eyebrow">TAKE THE NEXT STEP</p>
+    <h1>Verify before you act.</h1>
+
+    <p class="intro">
+      Use a contact you already knew before this message arrived.
+      Do not use any number or link from the suspicious message itself.
+    </p>
+
+    <ol class="steps">
+      <li>Pause the request.</li>
+      <li>Use a contact you already know.</li>
+      <li>Confirm the request before taking action.</li>
+    </ol>
+
+    <!-- Trusted contact section -->
+    <section>
+      <h2>Your trusted contact</h2>
+      <p class="section-note">
+        Stored only in this browser tab's session. Never sent anywhere for analysis.
+      </p>
+
+      <p id="no-contact-hint" class="empty-hint">
+        Add a contact below — someone you knew and trusted <strong>before</strong>
+        this message arrived. Do not copy a number from the message you received.
+      </p>
+
+      <form id="contact-form" novalidate>
+        <label for="name">Contact name</label>
+        <input
+          id="name"
+          type="text"
+          required
+          maxlength="80"
+          autocomplete="off"
+          placeholder="e.g. Mom, Dr. Lee"
+        >
+
+        <label for="phone">Phone number</label>
+        <input
+          id="phone"
+          type="tel"
+          required
+          maxlength="30"
+          autocomplete="off"
+          placeholder="A number you already trust"
+        >
+
+        <div class="actions">
+          <button type="submit">Save contact</button>
+          <button id="clear" type="button" class="secondary">Clear contact</button>
+        </div>
+      </form>
+
+      <p id="contact-status" role="status" aria-live="polite"></p>
+
+      <!-- Tel link — only shown after a valid contact is saved -->
+      <a id="call" hidden aria-label="Open phone dialer"></a>
+    </section>
+
+    <!-- Verification script section -->
+    <section>
+      <h2>What to say</h2>
+      <p class="section-note">
+        Use this message when you reach your contact through a channel you already trust.
+      </p>
+
+      <p id="script">
+        I received an urgent request that claims to be from you. Did you send it?
+      </p>
+
+      <button id="copy" type="button">Copy verification message</button>
+      <p id="copy-status" role="status" aria-live="polite"></p>
+
+      <p class="note">
+        Opening the dialer or copying this message does not confirm anyone's identity.
+        PausePal does not send messages or make calls automatically.
+      </p>
+    </section>
+  </main>
+</body>
+</html>
