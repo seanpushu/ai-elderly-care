@@ -1,22 +1,15 @@
-"""Live AI analysis for PausePal.
+"""Live AI analysis for PausePal using Groq.
 
 One model request per analysis, a strict timeout, no retries, and no demo
 fallback. Any configuration, transport, timeout, or output problem surfaces as
 ``AnalysisUnavailable`` so the API can answer with an English HTTP 503.
 
-Confirmed provider contract (OpenAI Chat Completions API):
-  * endpoint  ``POST {base_url}/chat/completions`` (default base URL
-    ``https://api.openai.com/v1``)
-  * auth      ``Authorization: Bearer <api key>``
-  * output    ``response_format`` = ``json_schema`` with ``strict: true``
+The backend uses Groq's official Python SDK and Chat Completions API with
+Structured Outputs. Credentials are read only from ``GROQ_API_KEY``.
 
-Credentials are read from the environment only. Two documented variable sets
-are accepted, checked in this order:
-  1. ``AI_INTEGRATIONS_OPENAI_API_KEY`` + ``AI_INTEGRATIONS_OPENAI_BASE_URL``
-     (Replit AI Integrations, Replit-managed billing)
-  2. ``OPENAI_API_KEY`` (+ optional ``OPENAI_BASE_URL``) for a user-supplied key
-Optional tuning: ``PAUSEPAL_MODEL`` (default ``gpt-4o-mini``) and
-``PAUSEPAL_MODEL_TIMEOUT_SECONDS`` (default 25).
+Optional tuning:
+  * ``GROQ_MODEL`` (default ``openai/gpt-oss-20b``)
+  * ``PAUSEPAL_MODEL_TIMEOUT_SECONDS`` (default 25 seconds)
 """
 
 from __future__ import annotations
@@ -27,12 +20,12 @@ import os
 from dataclasses import dataclass
 from typing import Any
 
-from openai import (
+from groq import (
     APIConnectionError,
+    APIError,
     APIStatusError,
     APITimeoutError,
-    AsyncOpenAI,
-    OpenAIError,
+    AsyncGroq,
 )
 
 from app.schemas import (
@@ -51,8 +44,8 @@ from app.schemas import (
 
 logger = logging.getLogger("pausepal.analyzer")
 
-PROVIDER_NAME = "openai"
-DEFAULT_MODEL = "gpt-4o-mini"
+PROVIDER_NAME = "groq"
+DEFAULT_MODEL = "openai/gpt-oss-20b"
 DEFAULT_TIMEOUT_SECONDS = 25.0
 MAX_OUTPUT_TOKENS = 900
 
@@ -69,15 +62,14 @@ class AnalysisUnavailable(Exception):
 @dataclass(frozen=True)
 class AnalyzerConfig:
     api_key: str
-    base_url: str | None
     model: str
     timeout_seconds: float
     credential_source: str
 
 
 def load_config() -> AnalyzerConfig | None:
-    """Return the live configuration, or ``None`` when no credentials exist."""
-    model = os.getenv("PAUSEPAL_MODEL", "").strip() or DEFAULT_MODEL
+    """Return the Groq live configuration, or ``None`` when no key exists."""
+    model = os.getenv("GROQ_MODEL", "").strip() or DEFAULT_MODEL
     raw_timeout = os.getenv("PAUSEPAL_MODEL_TIMEOUT_SECONDS", "").strip()
     try:
         timeout_seconds = float(raw_timeout) if raw_timeout else DEFAULT_TIMEOUT_SECONDS
@@ -85,15 +77,9 @@ def load_config() -> AnalyzerConfig | None:
         timeout_seconds = DEFAULT_TIMEOUT_SECONDS
     timeout_seconds = min(max(timeout_seconds, 1.0), 60.0)
 
-    managed_key = os.getenv("AI_INTEGRATIONS_OPENAI_API_KEY", "").strip()
-    managed_url = os.getenv("AI_INTEGRATIONS_OPENAI_BASE_URL", "").strip()
-    if managed_key and managed_url:
-        return AnalyzerConfig(managed_key, managed_url, model, timeout_seconds, "replit_ai_integrations")
-
-    own_key = os.getenv("OPENAI_API_KEY", "").strip()
-    if own_key:
-        own_url = os.getenv("OPENAI_BASE_URL", "").strip() or None
-        return AnalyzerConfig(own_key, own_url, model, timeout_seconds, "openai_api_key")
+    api_key = os.getenv("GROQ_API_KEY", "").strip()
+    if api_key:
+        return AnalyzerConfig(api_key, model, timeout_seconds, "groq_api_key")
 
     return None
 
@@ -178,18 +164,16 @@ def _build_messages(text: str) -> list[dict[str, str]]:
 
 
 async def request_completion(config: AnalyzerConfig, messages: list[dict[str, str]]) -> str:
-    """Perform exactly one provider call and return the raw JSON text.
+    """Perform exactly one Groq call and return the raw JSON text.
 
     Kept separate so tests can replace it. ``max_retries=0`` means a failed
     request is reported, not silently repeated.
     """
-    client = AsyncOpenAI(
+    async with AsyncGroq(
         api_key=config.api_key,
-        base_url=config.base_url,
         timeout=config.timeout_seconds,
         max_retries=0,
-    )
-    try:
+    ) as client:
         completion = await client.chat.completions.create(
             model=config.model,
             messages=messages,  # type: ignore[arg-type]
@@ -197,8 +181,6 @@ async def request_completion(config: AnalyzerConfig, messages: list[dict[str, st
             max_completion_tokens=MAX_OUTPUT_TOKENS,
             temperature=0.2,
         )
-    finally:
-        await client.close()
 
     if not completion.choices:
         raise InvalidAnalysis("The model returned no choices.")
@@ -219,7 +201,7 @@ async def analyze_message(text: str) -> AnalysisResponse:
     if config is None:
         raise AnalysisUnavailable(
             "not_configured",
-            "Live analysis is not configured. An OpenAI API key is required.",
+            "Live analysis is not configured. A Groq API key is required.",
         )
 
     messages = _build_messages(text)
@@ -242,7 +224,7 @@ async def analyze_message(text: str) -> AnalysisResponse:
         raise AnalysisUnavailable(
             "provider_error", "The analysis service returned an error. Please try again later."
         ) from None
-    except (APIConnectionError, OpenAIError):
+    except (APIConnectionError, APIError):
         logger.warning("analysis_failed reason=transport model=%s text_len=%d", config.model, len(text))
         raise AnalysisUnavailable(
             "provider_unreachable", "The analysis service could not be reached. Please try again later."
