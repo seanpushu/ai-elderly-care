@@ -14,18 +14,16 @@ from pathlib import Path
 from unittest.mock import AsyncMock, patch
 
 import httpx2
-from openai import APIConnectionError, APIStatusError, APITimeoutError
+from groq import APIConnectionError, APIStatusError, APITimeoutError
 
 import app.main as main_module
 from app.main import INDEX_FILE, app
 
 
-LIVE_ENV = {"OPENAI_API_KEY": "test-key-not-real"}
+LIVE_ENV = {"GROQ_API_KEY": "test-key-not-real"}
 NO_LIVE_ENV = {
-    "OPENAI_API_KEY": "",
-    "OPENAI_BASE_URL": "",
-    "AI_INTEGRATIONS_OPENAI_API_KEY": "",
-    "AI_INTEGRATIONS_OPENAI_BASE_URL": "",
+    "GROQ_API_KEY": "",
+    "GROQ_MODEL": "",
 }
 
 URGENT_TEXT = (
@@ -116,7 +114,7 @@ def model_output(**overrides: object) -> str:
 
 
 def _fake_request() -> httpx2.Request:
-    return httpx2.Request("POST", "https://api.openai.com/v1/chat/completions")
+    return httpx2.Request("POST", "https://api.groq.com/openai/v1/chat/completions")
 
 
 def _fake_status_error(status: int) -> APIStatusError:
@@ -134,7 +132,7 @@ class PausePalApiTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(body["status"], "ok")
         self.assertEqual(body["analysis_mode"], "live")
         self.assertTrue(body["analysis_available"])
-        self.assertEqual(body["provider"], "openai")
+        self.assertEqual(body["provider"], "groq")
         self.assertNotIn("test-key-not-real", json.dumps(body))
 
         with patch.dict(os.environ, NO_LIVE_ENV):
@@ -173,8 +171,8 @@ class PausePalApiTests(unittest.IsolatedAsyncioTestCase):
 
         # The provider saw the message as delimited untrusted data plus the system rules.
         config, messages = mock.await_args.args
-        self.assertEqual(config.model, "gpt-4o-mini")
-        self.assertEqual(config.credential_source, "openai_api_key")
+        self.assertEqual(config.model, "openai/gpt-oss-20b")
+        self.assertEqual(config.credential_source, "groq_api_key")
         self.assertEqual(messages[0]["role"], "system")
         self.assertIn("UNTRUSTED", messages[0]["content"])
         self.assertIn("<<<BEGIN UNTRUSTED MESSAGE>>>\n" + URGENT_TEXT, messages[1]["content"])
@@ -441,24 +439,19 @@ class PausePalApiTests(unittest.IsolatedAsyncioTestCase):
                 status, body, _ = await asgi_request("POST", "/api/analyze", {"text": text})
             self.assertEqual(status, 503, text)
             self.assertEqual(body["reason"], "not_configured", text)
-            self.assertEqual(body["detail"], "Live analysis is not configured. An OpenAI API key is required.")
+            self.assertEqual(body["detail"], "Live analysis is not configured. A Groq API key is required.")
             self.assertEqual(set(body), {"detail", "reason"}, text)
             self.assertNotIn("demo", json.dumps(body), text)
 
-    async def test_partial_or_blank_configuration_counts_as_unconfigured(self) -> None:
-        partial_configs = (
-            {**NO_LIVE_ENV, "AI_INTEGRATIONS_OPENAI_API_KEY": "managed-key"},  # no base URL
-            {**NO_LIVE_ENV, "AI_INTEGRATIONS_OPENAI_BASE_URL": "https://example.invalid/v1"},  # no key
-            {**NO_LIVE_ENV, "OPENAI_API_KEY": "   "},  # whitespace only
-        )
-        for env in partial_configs:
-            with patch.dict(os.environ, env):
-                health_status, health_body, _ = await asgi_request("GET", "/health")
-                status, body, _ = await asgi_request("POST", "/api/analyze", {"text": URGENT_TEXT})
-            self.assertEqual(health_status, 200)
-            self.assertFalse(health_body["analysis_available"], env)
-            self.assertEqual(status, 503, env)
-            self.assertEqual(body["reason"], "not_configured", env)
+    async def test_blank_configuration_counts_as_unconfigured(self) -> None:
+        env = {**NO_LIVE_ENV, "GROQ_API_KEY": "   "}
+        with patch.dict(os.environ, env):
+            health_status, health_body, _ = await asgi_request("GET", "/health")
+            status, body, _ = await asgi_request("POST", "/api/analyze", {"text": URGENT_TEXT})
+        self.assertEqual(health_status, 200)
+        self.assertFalse(health_body["analysis_available"])
+        self.assertEqual(status, 503)
+        self.assertEqual(body["reason"], "not_configured")
 
     async def test_unconfigured_requests_never_reach_the_provider(self) -> None:
         mock = AsyncMock(return_value=model_output())
