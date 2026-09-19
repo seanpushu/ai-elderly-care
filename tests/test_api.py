@@ -306,11 +306,70 @@ class PausePalApiTests(unittest.IsolatedAsyncioTestCase):
             status, body, _ = await asgi_request("POST", "/api/analyze", {"text": URGENT_TEXT})
         self.assertEqual(status, 200, body)
 
+    async def test_soft_scam_verdicts_are_rejected(self) -> None:
+        cases = (
+            "This is likely a scam.",
+            "It looks like a scam.",
+            "This message is probably legitimate.",
+            "It may be fraud, so be careful.",
+            "The caller seems genuine but check anyway.",
+            "This appears to be a phishing attempt.",
+            "The sender is not trustworthy.",
+            "This is almost certainly your grandson.",
+        )
+        for summary in cases:
+            output = model_output(summary=summary)
+            with patch.dict(os.environ, LIVE_ENV), patch(
+                "app.analyzer.request_completion", AsyncMock(return_value=output)
+            ):
+                status, body, _ = await asgi_request("POST", "/api/analyze", {"text": URGENT_TEXT})
+            self.assertEqual(status, 503, summary)
+            self.assertEqual(body["reason"], "invalid_output", summary)
+
+    async def test_short_non_english_text_is_rejected(self) -> None:
+        cases = {
+            "spanish step": model_output(next_steps=["Llame ahora mismo."]),
+            "spanish two words": model_output(next_steps=["Llame ahora."]),
+            "german step": model_output(next_steps=["Rufen Sie an."]),
+            "portuguese step": model_output(next_steps=["Nao envie dinheiro."]),
+            "one word": model_output(next_steps=["Pausa."]),
+            "short reason": model_output(signals=[{"quote": "right now", "reason": "Urgencia."}]),
+        }
+        for label, output in cases.items():
+            with patch.dict(os.environ, LIVE_ENV), patch(
+                "app.analyzer.request_completion", AsyncMock(return_value=output)
+            ):
+                status, body, _ = await asgi_request("POST", "/api/analyze", {"text": URGENT_TEXT})
+            self.assertEqual(status, 503, label)
+            self.assertEqual(body["reason"], "invalid_output", label)
+
     async def test_next_steps_may_not_endorse_message_supplied_contacts(self) -> None:
+        # Literal contact details, instructions to use the message's own channel,
+        # and warnings that still name that channel are all rejected: no wording
+        # that points at the attacker's channel may reach the user as advice.
         cases = (
             ["Call 555-0134 to confirm it is really them."],
             ["Open https://bail-help.example to pay."],
             ["Email support@example.com for details."],
+            ["Call the number in the message to confirm."],
+            ["Call the number they gave you to check."],
+            ["Ring the caller back on that number."],
+            ["Reply to the sender and ask for proof."],
+            ["Respond to the message to confirm the details."],
+            ["Text back to make sure it is them."],
+            ["Click the link to verify your account."],
+            ["Open the attachment to see the invoice."],
+            ["Scan the QR code to confirm your identity."],
+            ["Use the contact details provided to verify."],
+            ["Visit the website mentioned in the text."],
+            ["Call the new number to speak with the officer."],
+            ["Follow the link they sent to confirm."],
+            ["Do not click the link in the message."],
+            ["Never call the number provided in the text."],
+            ["Read the code to them so they can verify you."],
+            ["Log in to the site to check your balance."],
+            ["Call them back to confirm."],
+            ["Please call the number."],
         )
         for steps in cases:
             output = model_output(next_steps=steps)
@@ -319,7 +378,24 @@ class PausePalApiTests(unittest.IsolatedAsyncioTestCase):
             ):
                 status, body, _ = await asgi_request("POST", "/api/analyze", {"text": URGENT_TEXT})
             self.assertEqual(status, 503, steps)
-            self.assertEqual(body["reason"], "invalid_output")
+            self.assertEqual(body["reason"], "invalid_output", steps)
+
+    async def test_independent_verification_steps_are_accepted(self) -> None:
+        steps = [
+            "Pause and take your time before doing anything.",
+            "Call your grandchild on a number you already had saved.",
+            "Call your bank using the number on the back of your card.",
+            "Ask a trusted family member or friend to look at the message with you.",
+            "Do not reply until you have spoken to someone you trust.",
+            "Look up the organisation's official number yourself and call that.",
+        ]
+        output = model_output(next_steps=steps)
+        with patch.dict(os.environ, LIVE_ENV), patch(
+            "app.analyzer.request_completion", AsyncMock(return_value=output)
+        ):
+            status, body, _ = await asgi_request("POST", "/api/analyze", {"text": URGENT_TEXT})
+        self.assertEqual(status, 200, body)
+        self.assertEqual(body["next_steps"], steps)
 
     # --- request validation -------------------------------------------------------------
 

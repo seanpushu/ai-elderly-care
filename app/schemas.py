@@ -85,37 +85,47 @@ _ANY_LETTER = re.compile(r"[^\W\d_]", re.UNICODE)
 # Claims the service must never make. Matched case-insensitively against the
 # generated summary, reasons, and next steps (never against the user's quotes).
 #
-# Absolute claims are rejected wherever they appear.
-_ABSOLUTE_CLAIMS = (
-    re.compile(r"\b\d{1,3}(?:\.\d+)?\s?%"),
-    re.compile(r"\b(?:percent|probability|likelihood|odds|chance)\b", re.IGNORECASE),
-    re.compile(r"\b(?:definitely|for sure|100 ?percent|without (?:a )?doubt)\b", re.IGNORECASE),
-    re.compile(r"\b(?:is|are|will be|it's|that's)\s+guaranteed\b|\b(?:i|we)\s+guarantee\b", re.IGNORECASE),
-    re.compile(r"\bguaranteed\s+(?:to be\s+)?(?:safe|secure|legitimate|genuine)\b", re.IGNORECASE),
+# 1. Verdict vocabulary is banned outright, hedged or not. PausePal describes
+#    pressure patterns; it never labels a message a scam, legitimate, fake, etc.
+_VERDICT_WORDS = re.compile(
+    r"\b(?:scams?|scammers?|scammy|frauds?|fraudulent|fraudsters?|phishing|smishing|vishing|"
+    r"hoax(?:es)?|swindles?|con\s+artists?|legit|legitimate|illegitimate|genuine|authentic|"
+    r"inauthentic|fakes?|faked|impost[eo]rs?|impersonators?|cloned|deepfakes?|ai[- ]generated|"
+    r"lying|liars?|truthful|dishonest|trustworthy|untrustworthy)\b",
+    re.IGNORECASE,
 )
 
-# Verdict claims (authenticity, truth, safety) are rejected unless the same
-# sentence hedges them first, e.g. "that does not mean it is safe" or
-# "PausePal cannot tell whether the caller is really your grandson".
+# 2. Probabilities, scores, and certainty language are banned outright.
+_ABSOLUTE_CLAIMS = (
+    re.compile(r"\b\d{1,3}(?:\.\d+)?\s?%"),
+    re.compile(r"\b(?:percent|percentage|probability|probabilities|likelihood|odds|chance|chances|score|scores)\b", re.IGNORECASE),
+    re.compile(r"\b(?:likely|unlikely|probably|probable|improbable|almost certainly|definitely|for sure|100 ?percent|without (?:a )?doubt)\b", re.IGNORECASE),
+    re.compile(r"\b(?:is|are|will be|it's|that's)\s+guaranteed\b|\b(?:i|we)\s+guarantee\b", re.IGNORECASE),
+    re.compile(r"\bguaranteed\s+(?:to be\s+)?(?:safe|secure)\b", re.IGNORECASE),
+)
+
+# 3. Authenticity, truth, and safety verdicts built from ordinary words are
+#    rejected unless the same sentence hedges them first, e.g. "that does not
+#    mean it is safe" or "PausePal cannot tell whether the caller is really
+#    your grandson".
 _VERDICT_CLAIMS = (
-    re.compile(r"\b(?:is|are|was|were)\s+(?:a|an)\s+(?:scam|fraud|hoax)\b", re.IGNORECASE),
     re.compile(
-        r"\b(?:this|it|that|the message|the sender|the caller|the request|the offer)\s+"
-        r"(?:is|was|are|were)\s+(?:not\s+)?(?:legitimate|genuine|real|authentic|fake|safe|true|false)\b",
+        r"\b(?:this|it|that|the message|the sender|the caller|the request|the offer|the story)\s+"
+        r"(?:is|was|are|were|isn't|wasn't)\s+(?:not\s+)?(?:real|safe|true|false|honest)\b",
         re.IGNORECASE,
     ),
     re.compile(
-        r"\b(?:voice|caller|speaker|identity|person|sender)\b[^.!?]{0,40}?"
-        r"\b(?:real|genuine|authentic|fake|cloned|impostor|imposter|ai[- ]generated)\b",
+        r"\b(?:voice|caller|speaker|identity|person|sender|grandson|granddaughter|grandchild|relative)\b"
+        r"[^.!?]{0,40}?\b(?:real|honest)\b",
         re.IGNORECASE,
     ),
     re.compile(
         r"\b(?:is|are|was|were|isn't|aren't|wasn't|weren't)\s+(?:not\s+)?(?:really|actually|truly)\s+"
-        r"(?:your|a|an|the|from|who)\b",
+        r"(?:your|a|an|the|from|who|in)\b",
         re.IGNORECASE,
     ),
-    re.compile(r"\b(?:money|funds|savings|account|information)\s+(?:is|are|will be|remains?|stays?)\s+safe\b", re.IGNORECASE),
-    re.compile(r"\b(?:telling|tells|told)\s+the\s+truth\b|\b(?:is|are|was|were)\s+(?:lying|truthful|honest)\b", re.IGNORECASE),
+    re.compile(r"\b(?:money|funds|savings|account|information|you)\s+(?:is|are|will be|remains?|stays?)\s+safe\b", re.IGNORECASE),
+    re.compile(r"\b(?:telling|tells|told)\s+the\s+truth\b|\b(?:looks?|seems?|sounds?|appears?)\s+(?:like\s+)?(?:a\s+)?(?:real|safe|suspicious)\b", re.IGNORECASE),
 )
 
 _HEDGE = re.compile(
@@ -129,22 +139,87 @@ def _is_hedged(value: str, match_start: int) -> bool:
     sentence_start = max(value.rfind(".", 0, match_start), value.rfind("!", 0, match_start), value.rfind("?", 0, match_start))
     return bool(_HEDGE.search(value, sentence_start + 1, match_start))
 
-# Recommendations may only point at independent, pre-known channels. Any phone
-# number, URL, or e-mail address inside a next step is treated as an endorsement
-# of message-supplied contact details and rejected.
+
+# ---------------------------------------------------------------------------
+# Next steps: independent verification only.
+#
+# A step is rejected when it contains literal contact details, tells the user
+# to reply/click/scan/log in/send codes, or refers to a channel attributed to
+# the message or sender ("the number in the message", "the link they sent").
+# This applies even when phrased as a warning ("do not click the link") so
+# that no wording that names the attacker's channel can reach the user as a
+# recommendation. A channel noun ("number", "link", ...) is allowed only when
+# the step also names an independent source ("already saved", "on the back of
+# your card", "official", "in person", ...).
 _CONTACT_DETAIL = re.compile(
     r"(?:https?://|www\.|[\w.+-]+@[\w-]+\.\w+|(?:\+?\d[\d\s().-]{6,}\d))",
     re.IGNORECASE,
 )
+_CHANNEL_NOUN = re.compile(
+    r"\b(?:numbers?|phone|telephone|links?|urls?|websites?|web ?sites?|sites?|web ?pages?|addresses?|"
+    r"e-?mails?|contacts?|contact details|lines?|hotlines?|extensions?|attachments?|qr|buttons?|apps?|"
+    r"portals?|accounts?|chats?|whatsapp|telegram|messenger)\b",
+    re.IGNORECASE,
+)
+_MESSAGE_CHANNEL_ACTIONS = re.compile(
+    r"\b(?:write back|text back|message back|"
+    r"click|clicking|tap|tapping|scan|scanning|download|downloading|install|installing|"
+    r"log ?in|sign ?in|log on|enter (?:the|your|a) (?:code|password|pin|details)|"
+    r"(?:share|give|read|read out|provide|send|confirm|repeat) (?:the|your|a|this|that|any) (?:code|codes|password|pin|otp|one-time|verification|security))\b",
+    re.IGNORECASE,
+)
+# "reply"/"respond" is only acceptable as something to hold off on
+# ("before you respond", "do not reply"), never as an instruction.
+_REPLY_WORD = re.compile(r"\b(?:reply|replies|replying|respond|responds|responding|answer|answering)\b", re.IGNORECASE)
+_DEFERRED_REPLY = re.compile(
+    r"\b(?:before|without|do not|don't|never|avoid|instead of|rather than|not)\s+(?:\w+\s+)?"
+    r"(?:reply|replies|replying|respond|responds|responding|answer|answering)\b",
+    re.IGNORECASE,
+)
+_MESSAGE_ATTRIBUTION = re.compile(
+    r"\b(?:this|that|their|his|her|its|new|provided|given|listed|included|supplied|attached|above|"
+    r"sender'?s?|caller'?s?|unknown|unfamiliar|different)\s+(?:phone\s+|mobile\s+|cell\s+|contact\s+)?"
+    r"(?:numbers?|links?|urls?|websites?|sites?|addresses?|e-?mails?|contacts?|lines?|extensions?|attachments?|buttons?|apps?)\b"
+    r"|\b(?:in|from|within|of|on|via|through)\s+(?:the|this|that|their|his|her)\s+(?:message|text|e-?mail|call|voicemail|chat|post|sms)\b"
+    r"|\b(?:they|he|she|the sender|the caller)\s+(?:gave|sent|provided|listed|shared|left|texted|mentioned|included|offered|supplied)\b"
+    r"|\b(?:number|link|website|address|e-?mail|contact)\s+(?:they|he|she)\s+(?:gave|sent|provided|left|shared|mentioned)\b"
+    r"|\b(?:sent|provided|given|included|listed|mentioned|shown|quoted)\s+(?:to you\s+)?(?:in|with|by)\s+(?:the|this|that)\b"
+    r"|\bcall(?:ing)?\s+(?:them|him|her)\s+back\b(?!\s+(?:on|using|at)\s+(?:a|the)\s+(?:number|phone)\s+you)",
+    re.IGNORECASE,
+)
+_INDEPENDENT_SOURCE = re.compile(
+    r"\b(?:already (?:had|have|has|saved|know|knew|use|used)|saved|known|trusted|official|independent(?:ly)?|"
+    r"yourself|your own|on the back of|on your (?:card|statement|bill|passbook)|in person|branch|"
+    r"directory|phone ?book|address book|before this message|look(?:ed)? up|previous(?:ly)?|"
+    r"usual|normal|regular|used before|have used|family member|friend)\b",
+    re.IGNORECASE,
+)
 
 
+def _check_next_step(step: str) -> None:
+    if _CONTACT_DETAIL.search(step):
+        raise InvalidAnalysis("Next steps must not include phone numbers, links, or addresses.")
+    if _MESSAGE_CHANNEL_ACTIONS.search(step):
+        raise InvalidAnalysis("Next steps must not tell the user to click, scan, log in, or share codes.")
+    reply_mentions = len(_REPLY_WORD.findall(step))
+    if reply_mentions and reply_mentions != len(_DEFERRED_REPLY.findall(step)):
+        raise InvalidAnalysis("Next steps must not tell the user to reply to the message.")
+    if _MESSAGE_ATTRIBUTION.search(step):
+        raise InvalidAnalysis("Next steps must not refer to contact channels supplied by the message.")
+    if _CHANNEL_NOUN.search(step) and not _INDEPENDENT_SOURCE.search(step):
+        raise InvalidAnalysis("Next steps may only mention contact channels the user already trusts.")
+
+
+# ---------------------------------------------------------------------------
+# English check. Latin-script ratio plus a minimum number of distinctly English
+# function/content words. Every generated field must be at least three words.
 _ENGLISH_MARKERS = frozenset(
-    """the a an and or to is are was were be been it its this that these those not no do does
-    did you your yours they them their who what which when where why how if before after with
-    without for of in on at from by about into someone anyone anything something can cannot
-    could should would may might will there here have has had ask call check pause verify
-    trust trusted message request money send sent tell talk know sure safe person family
-    friend bank number already again yet please""".split()
+    """the and or to is are was were be been not does did you your yours they them their who what
+    which when where why how if before after with without for about into someone anyone anything
+    something can cannot could should would may might will there here have has had ask call check
+    pause verify trust trusted message request money send sent tell talk know sure safe person
+    family friend bank number already again yet please this that these those wait stop take time
+    think else first from someone anybody nobody yourself""".split()
 )
 _WORD = re.compile(r"[A-Za-z']+")
 
@@ -158,7 +233,7 @@ def _looks_english(value: str) -> bool:
         return False
     words = [word.lower().strip("'") for word in _WORD.findall(value)]
     if len(words) < 3:
-        return True
+        return False
     markers = {word for word in words if word in _ENGLISH_MARKERS}
     needed = 2 if len(words) >= 8 else 1
     return len(markers) >= needed
@@ -167,6 +242,8 @@ def _looks_english(value: str) -> bool:
 def _check_generated_text(value: str, field_name: str) -> None:
     if not _looks_english(value):
         raise InvalidAnalysis(f"{field_name} must be written in English.")
+    if _VERDICT_WORDS.search(value):
+        raise InvalidAnalysis(f"{field_name} contains a verdict PausePal does not make.")
     for pattern in _ABSOLUTE_CLAIMS:
         if pattern.search(value):
             raise InvalidAnalysis(f"{field_name} contains a claim PausePal does not make.")
@@ -215,7 +292,6 @@ def validate_analysis(raw: Any, source_text: str) -> AnalysisResponse:
 
     for step in result.next_steps:
         _check_generated_text(step, "next step")
-        if _CONTACT_DETAIL.search(step):
-            raise InvalidAnalysis("Next steps must not include phone numbers, links, or addresses.")
+        _check_next_step(step)
 
     return result

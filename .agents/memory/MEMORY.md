@@ -1,1 +1,2 @@
-- [Live analysis provider decision](live-analysis-provider.md) — OpenAI Chat Completions only, creds from AI_INTEGRATIONS_OPENAI_* then OPENAI_API_KEY; no fallback; dev .venv is polluted by .pythonlibs.
+- [Live analysis provider decision](live-analysis-provider.md) — OpenAI Chat Completions only; dev .venv shares .pythonlibs so pip shows "already satisfied".
+- [Validation contract](validation-contract.md) — rules the post-model validator enforces in app/schemas.py; what passes and what is rejected.

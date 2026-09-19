@@ -44,7 +44,17 @@ Credentials are read from the environment (set them as Replit Secrets; never com
 }
 ```
 
-The server validates every model reply before returning it: assessment enum, field types and lengths, English text, every `quote` an exact substring of the submitted message, no signals for `insufficient_information`, at least one signal for `warning`, no percentages/probabilities, no authenticity, truth, or "your money is safe" claims, and no phone numbers, links, or e-mail addresses in `next_steps`. Anything that fails is a 503 (`reason: invalid_output`). Logs record the failure reason and message length only, never the message or any key.
+The server validates every model reply before returning it (`app/schemas.py`):
+- Assessment enum, field types, and lengths.
+- Every `signals[].quote` is an exact verbatim substring of the submitted text.
+- `insufficient_information` → no signals; `warning` → at least one signal.
+- All generated text must be in English (≥ 90 % Latin script, minimum English function words).
+- Verdict vocabulary is banned entirely: scam, fraud, phishing, legitimate, genuine, authentic, fake, impostor, cloned, AI-generated, and equivalents.
+- Probabilistic or soft estimates are banned: likely, probably, looks like, 85 %, percent, odds, and equivalents.
+- Authenticity/truth/"money is safe" verdicts are banned unless the same sentence first hedges with a word like *cannot tell*, *whether*, *verify*, etc.
+- `next_steps` may not contain phone numbers, URLs, or e-mail addresses; may not tell the user to reply, click, tap, scan, download, log in, or share a code; may not refer to any contact channel supplied by the message (even as a warning — move those observations to a signal reason instead); and may only name a channel noun (number, link, …) when also naming an independent source (already saved, on the back of your card, official, in person, …).
+
+Anything that fails is a 503 (`reason: invalid_output`). Logs record the failure reason and text length only — never the message or any key.
 
 ### Tests
 

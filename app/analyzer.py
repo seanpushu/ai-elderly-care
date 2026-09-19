@@ -122,12 +122,12 @@ Return ONLY a JSON object matching the provided schema:
   * "insufficient_information": the message is too short, fragmentary, or context-free to reason about. Use an empty signals list and do not invent evidence.
 - summary: at most {MAX_SUMMARY_LENGTH} characters, plain English, calm and non-alarming, written for an older adult.
 - signals: up to {MAX_SIGNALS} items. Each "quote" MUST be copied character-for-character from the message (same spelling, capitalisation, and punctuation, at most {MAX_QUOTE_LENGTH} characters). Each "reason" (at most {MAX_REASON_LENGTH} characters) explains why that exact wording is a reason to pause. Never paraphrase inside "quote". Never quote text that is not in the message.
-- next_steps: 1 to {MAX_NEXT_STEPS} short English actions (each at most {MAX_STEP_LENGTH} characters). Only recommend INDEPENDENT verification: pausing, calling the person or organisation back on a number the user already had saved before this message, visiting a branch in person, or asking a trusted family member or friend. NEVER tell the user to call, text, reply to, or click any number, link, address, or contact that appears in the message. Do not include any phone numbers, URLs, or e-mail addresses in next_steps.
+- next_steps: 1 to {MAX_NEXT_STEPS} short English actions (each 3 words to {MAX_STEP_LENGTH} characters). Only recommend INDEPENDENT verification: pausing, calling the person or organisation on a number the user already had saved before this message, using the number on the back of their bank card, visiting a branch in person, or asking a trusted family member or friend. Do NOT mention the message's own number, link, website, e-mail, attachment, QR code, or app in next_steps at all, not even to say "do not click it"; put that observation in a signal reason instead. Never tell the user to reply, text back, click, tap, scan, download, log in, or read out a code. Do not include any phone numbers, URLs, or e-mail addresses in next_steps.
 
 Hard limits on what you may say, anywhere in the output:
-- No percentages, probabilities, scores, or "likely/unlikely a scam" style estimates.
-- No claim that the sender, caller, or voice is real, fake, cloned, authentic, or AI-generated.
-- No claim that anything in the message is true or false, or that the sender is lying or honest.
+- Do not use verdict words such as scam, fraud, phishing, legitimate, genuine, authentic, fake, impostor, cloned, or AI-generated. Describe the pressure pattern instead ("asks for secrecy", "claims to be a relative in trouble").
+- No percentages, probabilities, scores, or "likely / probably / looks like" estimates of any kind.
+- No claim that the sender, caller, or voice is real, or that anything in the message is true or false, or that the sender is lying or honest.
 - No promise that the user's money, account, or information is or will be safe.
 - Describe wording and pressure patterns; do not diagnose the person or the situation.
 All output text must be in English regardless of the language of the message."""
