@@ -4,59 +4,58 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="theme-color" content="#f5f1e8">
-    <title>PausePal — take a moment to review a message</title>
+    <title>PausePal — Before you act, take a pause.</title>
     <link rel="stylesheet" href="/static/analyze.css">
     <script src="/static/analyze.js" defer></script>
   </head>
   <body>
-    <a class="skip-link" href="#main">Skip to message review</a>
+    <a class="skip-link" href="#main">Skip to message check</a>
     <div class="page-shell">
       <header class="topbar">
         <a class="brand" href="/" aria-label="PausePal home">
           <span class="brand-mark" aria-hidden="true">P</span>
           <span>PausePal</span>
         </a>
-        <a class="top-link" href="/static/verify.html">How it works</a>
+        <a class="top-link" href="/static/verify.html">Verify with someone you trust</a>
       </header>
 
       <main id="main">
         <section class="intro" aria-labelledby="page-title">
           <p class="eyebrow">A MOMENT OF CLARITY</p>
-          <h1 id="page-title">Pause. Then look a little closer.</h1>
-          <p class="intro-copy">Paste a message that has you wondering. PausePal will organize the details, possible signals, and questions you could consider next.</p>
+          <h1 id="page-title">Before you act, take a pause.</h1>
+          <p class="intro-copy">Paste a message that has you wondering. PausePal will point out wording worth a closer look and suggest ways to check it. It cannot tell you whether a message is genuine.</p>
         </section>
 
         <div class="workspace">
           <section class="review-card" aria-labelledby="message-heading">
             <div class="card-heading">
               <div>
-                <p class="step-label">01 <span>·</span> REVIEW A MESSAGE</p>
-                <h2 id="message-heading">What did they send?</h2>
+                <p class="step-label">01 <span>·</span> THE MESSAGE</p>
+                <h2 id="message-heading">What did they send you?</h2>
               </div>
-              <span class="quiet-tag">Any language</span>
             </div>
 
-            <form id="analyzerForm">
+            <form id="analyzerForm" novalidate>
               <label class="field-label" for="messageInput">Message text</label>
-              <textarea id="messageInput" name="text" maxlength="4000" rows="7" required placeholder="Paste or type the message here…" aria-describedby="input-help characterCount"></textarea>
+              <textarea id="messageInput" name="text" rows="7" placeholder="Paste or type the message here…" aria-describedby="input-help characterCount"></textarea>
               <div class="input-meta">
-                <p id="input-help">Use a sample below, or enter a message in any language.</p>
+                <p id="input-help">Use an example below, or paste a message of up to 4,000 characters.</p>
                 <p id="characterCount" aria-live="polite">0 / 4000</p>
               </div>
 
               <div class="sample-area">
-                <p class="sample-heading">Try a sample</p>
-                <div class="sample-list" aria-label="Sample messages">
-                  <button class="sample-button" type="button" data-sample="Grandma, send me $900 now. Do not tell Mom.">Urgent money request</button>
-                  <button class="sample-button" type="button" data-sample="Your appointment moved from 2 pm to 3 pm. Please check the patient portal you normally use.">Appointment update</button>
-                  <button class="sample-button" type="button" data-sample="Help.">Too little context</button>
+                <p class="sample-heading" id="sample-heading">Try an example</p>
+                <div class="sample-list" role="group" aria-labelledby="sample-heading">
+                  <button class="sample-button" type="button" data-sample="Grandma, it's me. I'm in trouble and I need you to send me $900 right now. Please do not tell Mom or Dad, they will only worry. Buy gift cards and text me the codes today.">Urgent transfer with secrecy</button>
+                  <button class="sample-button" type="button" data-sample="Hello, this is Dr. Lee's clinic. Your appointment on Tuesday has moved from 2 pm to 3 pm. If that does not work for you, please call our usual office number to reschedule.">Routine appointment change</button>
+                  <button class="sample-button" type="button" data-sample="It's urgent.">Not enough information</button>
                 </div>
               </div>
 
               <div class="form-footer">
-                <p class="form-note">A clear summary can make it easier to decide what to ask next.</p>
+                <p class="form-note">Nothing is saved. The message is only used for this check.</p>
                 <button class="submit-button" id="submitButton" type="submit">
-                  <span>Review message</span>
+                  <span id="submitLabel">Help me check</span>
                   <span aria-hidden="true">→</span>
                 </button>
               </div>
@@ -68,17 +67,24 @@
             <div class="note-icon" aria-hidden="true">✳</div>
             <p class="note-kicker">TAKE YOUR TIME</p>
             <h2>It’s okay to pause before you reply.</h2>
-            <p>Review the words, notice what stands out, and choose a next step that feels right for you.</p>
-            <a href="/static/verify.html">Explore the guide <span aria-hidden="true">↗</span></a>
+            <p>Real requests can wait a few minutes. If a message pushes you to act right now, that is a good moment to check with someone you trust.</p>
+            <a href="/static/verify.html">Verify with someone you trust <span aria-hidden="true">↗</span></a>
           </aside>
         </div>
 
-        <section class="result-card" id="resultCard" aria-labelledby="resultHeading" aria-live="polite" hidden>
+        <section class="error-card" id="errorCard" role="alert" aria-labelledby="errorHeading" hidden>
+          <h2 id="errorHeading">We couldn’t check this message</h2>
+          <p id="errorMessage"></p>
+          <p class="error-note">No result is shown because the check did not finish. Nothing here should be read as a sign that the message is fine.</p>
+          <button class="retry-button" id="retryButton" type="button">Try again</button>
+        </section>
+
+        <section class="result-card" id="resultCard" aria-labelledby="resultHeading" hidden>
           <div id="demoNotice" class="demo-notice" hidden>Demo data — not a live AI result</div>
           <div class="result-heading-row">
             <div>
-              <p class="step-label">02 <span>·</span> YOUR REVIEW</p>
-              <h2 id="resultHeading">Review complete</h2>
+              <p class="step-label">02 <span>·</span> WHAT WE NOTICED</p>
+              <h2 id="resultHeading">Check complete</h2>
             </div>
             <span class="mode-tag" id="modeTag" hidden></span>
           </div>
@@ -90,15 +96,23 @@
             <h3>Summary</h3>
             <p id="summaryText"></p>
           </div>
+          <div id="originalSection" class="result-section" hidden>
+            <h3>Your message, with highlighted wording</h3>
+            <p class="section-hint" id="highlightHint"></p>
+            <div id="originalText" class="original-text" tabindex="0" aria-describedby="highlightHint"></div>
+          </div>
           <div id="signalsSection" class="result-section" hidden>
-            <h3>Signals to consider</h3>
+            <h3>Why this wording stood out</h3>
             <div id="signalsList" class="signals-list"></div>
           </div>
           <div id="nextStepsSection" class="result-section" hidden>
-            <h3>Possible next steps</h3>
+            <h3>Ways to check before you act</h3>
             <ol id="nextStepsList" class="next-steps-list"></ol>
           </div>
-          <a class="verify-link" href="/static/verify.html">Open the verification guide <span aria-hidden="true">→</span></a>
+          <div class="result-actions">
+            <a class="verify-button" id="verifyButton" href="/static/verify.html">Verify with someone you trust <span aria-hidden="true">→</span></a>
+            <button class="secondary-button" id="checkAnotherButton" type="button">Check another message</button>
+          </div>
         </section>
       </main>
 
