@@ -2,9 +2,9 @@
 
 PausePal helps older adults pause, understand warning signs, and verify urgent requests through people they already trust.
 
-## Starter status
+## Status
 
-This is a runnable hackathon starter. Analysis currently uses **explicitly labeled demo rules**, not a live AI model. Do not present demo outputs as verified scam detection. The backend teammate will add the real model integration.
+Analysis is **live**: every `POST /api/analyze` makes one real model call. There is no demo or rule-based fallback. If the model is not configured, times out, or returns something that fails validation, the API answers HTTP 503 with a short English message instead of a made-up result. Do not present any output as verified scam detection; PausePal describes pressure patterns and suggests independent verification.
 
 ## Run
 
@@ -15,7 +15,44 @@ python -m pip install -r requirements.txt
 python start.py
 ```
 
-Open port 8000. Replit Run and Autoscale publishing settings are in `.replit`. Health check: `/health`. API: `POST /api/analyze` with JSON `{"text":"Your message"}`. The trusted-contact page is `/static/verify.html`.
+The server binds `0.0.0.0` on `$PORT` (default 8000). Replit Run and Autoscale publishing settings are in `.replit`. Health check: `/health`. API: `POST /api/analyze` with JSON `{"text":"Your message"}`. The trusted-contact page is `/static/verify.html`.
+
+## AI backend configuration
+
+Confirmed provider: **OpenAI Chat Completions API** (`POST {base_url}/chat/completions`, Bearer-token auth, `json_schema` structured output) through the official `openai` Python package. Default model `gpt-4o-mini`; one request per analysis, `max_retries=0`, 25-second timeout.
+
+Credentials are read from the environment (set them as Replit Secrets; never commit values). Either set works:
+
+| Variable | Purpose |
+| --- | --- |
+| `AI_INTEGRATIONS_OPENAI_API_KEY` + `AI_INTEGRATIONS_OPENAI_BASE_URL` | Replit AI Integrations (Replit-managed OpenAI billing). Checked first. |
+| `OPENAI_API_KEY` (+ optional `OPENAI_BASE_URL`) | Your own OpenAI key. |
+| `PAUSEPAL_MODEL` (optional) | Override the model name. |
+| `PAUSEPAL_MODEL_TIMEOUT_SECONDS` (optional) | Provider timeout, 1–60 seconds. |
+
+`GET /health` reports `analysis_available: false` when neither credential set is present. Development and production credentials are configured separately in Replit; the published app needs its own secret values.
+
+### Response contract
+
+```json
+{
+  "assessment": "warning | no_clear_signals | insufficient_information",
+  "summary": "English text",
+  "signals": [{"quote": "exact substring of the submitted text", "reason": "English text"}],
+  "next_steps": ["English text"],
+  "mode": "live"
+}
+```
+
+The server validates every model reply before returning it: assessment enum, field types and lengths, English text, every `quote` an exact substring of the submitted message, no signals for `insufficient_information`, at least one signal for `warning`, no percentages/probabilities, no authenticity, truth, or "your money is safe" claims, and no phone numbers, links, or e-mail addresses in `next_steps`. Anything that fails is a 503 (`reason: invalid_output`). Logs record the failure reason and message length only, never the message or any key.
+
+### Tests
+
+```sh
+python -m unittest discover -s tests -v
+```
+
+`tests/test_api.py` mocks the provider call and covers HTTP-shaped requests, urgent/insufficient/prompt-injection messages, exact-quote preservation, request validation, provider timeout/transport/status failures, malformed model output, and the no-fallback rule. `tests/test_live_provider.py` performs a real round-trip and skips itself when no key is configured.
 
 ## Three-person development
 

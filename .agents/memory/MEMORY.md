@@ -1,0 +1,1 @@
+- [Live analysis provider decision](live-analysis-provider.md) — OpenAI Chat Completions only, creds from AI_INTEGRATIONS_OPENAI_* then OPENAI_API_KEY; no fallback; dev .venv is polluted by .pythonlibs.
