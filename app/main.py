@@ -1,4 +1,4 @@
-"""FastAPI entry point for the PausePal scaffold."""
+"""FastAPI entry point for PausePal."""
 
 from __future__ import annotations
 
@@ -12,7 +12,7 @@ from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, validator
 
-from app.analyzer import analyze_message
+from app.analyzer import LiveAnalysisError, analyze_demo_message, analyze_live_message
 
 
 PROJECT_DIR = Path(__file__).resolve().parent.parent
@@ -62,25 +62,24 @@ async def readable_validation_error(_request: Any, exc: RequestValidationError) 
     return JSONResponse(status_code=422, content={"detail": detail})
 
 
-def require_demo_mode() -> str:
-    """Reject unimplemented modes instead of silently returning demo results."""
+def get_analysis_mode() -> str:
+    """Return the configured analysis mode without silently changing it."""
     mode = os.getenv("PAUSEPAL_MODE", "demo").strip().lower()
-    if mode == "demo":
+    if mode in {"demo", "live"}:
         return mode
-    if mode == "live":
-        raise HTTPException(
-            status_code=503,
-            detail="Live analysis is unavailable because no AI integration is configured.",
-        )
     raise HTTPException(
         status_code=503,
-        detail="This analysis mode is unavailable. Use PAUSEPAL_MODE=demo.",
+        detail="This analysis mode is unavailable. Use PAUSEPAL_MODE=demo or PAUSEPAL_MODE=live.",
     )
 
 
 @app.get("/health")
 async def health() -> dict[str, str]:
-    return {"status": "ok", "analysis_mode": "demo"}
+    mode = os.getenv("PAUSEPAL_MODE", "demo").strip().lower()
+    return {
+        "status": "ok",
+        "analysis_mode": mode if mode in {"demo", "live"} else "unavailable",
+    }
 
 
 @app.get("/", include_in_schema=False)
@@ -90,5 +89,12 @@ async def home() -> FileResponse:
 
 @app.post("/api/analyze")
 async def analyze(request: AnalyzeRequest) -> dict[str, Any]:
-    require_demo_mode()
-    return await analyze_message(request.text)
+    mode = get_analysis_mode()
+
+    if mode == "demo":
+        return await analyze_demo_message(request.text)
+
+    try:
+        return await analyze_live_message(request.text)
+    except LiveAnalysisError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
