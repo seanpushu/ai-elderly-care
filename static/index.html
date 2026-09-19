@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#f5f1e8">
+    <title>PausePal — take a moment to review a message</title>
+    <link rel="stylesheet" href="/static/analyze.css">
+    <script src="/static/analyze.js" defer></script>
+  </head>
+  <body>
+    <a class="skip-link" href="#main">Skip to message review</a>
+    <div class="page-shell">
+      <header class="topbar">
+        <a class="brand" href="/" aria-label="PausePal home">
+          <span class="brand-mark" aria-hidden="true">P</span>
+          <span>PausePal</span>
+        </a>
+        <a class="top-link" href="/static/verify.html">How it works</a>
+      </header>
+
+      <main id="main">
+        <section class="intro" aria-labelledby="page-title">
+          <p class="eyebrow">A MOMENT OF CLARITY</p>
+          <h1 id="page-title">Pause. Then look a little closer.</h1>
+          <p class="intro-copy">Paste a message that has you wondering. PausePal will organize the details, possible signals, and questions you could consider next.</p>
+        </section>
+
+        <div class="workspace">
+          <section class="review-card" aria-labelledby="message-heading">
+            <div class="card-heading">
+              <div>
+                <p class="step-label">01 <span>·</span> REVIEW A MESSAGE</p>
+                <h2 id="message-heading">What did they send?</h2>
+              </div>
+              <span class="quiet-tag">Any language</span>
+            </div>
+
+            <form id="analyzerForm">
+              <label class="field-label" for="messageInput">Message text</label>
+              <textarea id="messageInput" name="text" maxlength="4000" rows="7" required placeholder="Paste or type the message here…" aria-describedby="input-help characterCount"></textarea>
+              <div class="input-meta">
+                <p id="input-help">Use a sample below, or enter a message in any language.</p>
+                <p id="characterCount" aria-live="polite">0 / 4000</p>
+              </div>
+
+              <div class="sample-area">
+                <p class="sample-heading">Try a sample</p>
+                <div class="sample-list" aria-label="Sample messages">
+                  <button class="sample-button" type="button" data-sample="Your package is on hold. Confirm your address and pay a small redelivery fee here.">Package fee</button>
+                  <button class="sample-button" type="button" data-sample="Hi Grandma, I lost my phone. I need $400 today. Please don’t tell Mom—I’ll explain later.">Urgent money request</button>
+                  <button class="sample-button" type="button" data-sample="Hi, it’s the bank’s fraud desk. Tell me the one-time code we just sent so I can secure your account.">Code request</button>
+                </div>
+              </div>
+
+              <div class="form-footer">
+                <p class="form-note">A clear summary can make it easier to decide what to ask next.</p>
+                <button class="submit-button" id="submitButton" type="submit">
+                  <span>Review message</span>
+                  <span aria-hidden="true">→</span>
+                </button>
+              </div>
+              <p class="status-message" id="statusMessage" role="status" aria-live="polite"></p>
+            </form>
+          </section>
+
+          <aside class="side-note" aria-label="A gentle reminder">
+            <div class="note-icon" aria-hidden="true">✳</div>
+            <p class="note-kicker">TAKE YOUR TIME</p>
+            <h2>It’s okay to pause before you reply.</h2>
+            <p>Review the words, notice what stands out, and choose a next step that feels right for you.</p>
+            <a href="/static/verify.html">Explore the guide <span aria-hidden="true">↗</span></a>
+          </aside>
+        </div>
+
+        <section class="result-card" id="resultCard" aria-labelledby="resultHeading" aria-live="polite" hidden>
+          <div id="demoNotice" class="demo-notice" hidden>Demo data — not a live AI result</div>
+          <div class="result-heading-row">
+            <div>
+              <p class="step-label">02 <span>·</span> YOUR REVIEW</p>
+              <h2 id="resultHeading">Review complete</h2>
+            </div>
+            <span class="mode-tag" id="modeTag" hidden></span>
+          </div>
+          <div class="assessment-row">
+            <span class="assessment-label">Assessment</span>
+            <span class="assessment-badge" id="assessmentBadge"></span>
+          </div>
+          <div id="summarySection" class="result-section" hidden>
+            <h3>Summary</h3>
+            <p id="summaryText"></p>
+          </div>
+          <div id="signalsSection" class="result-section" hidden>
+            <h3>Signals to consider</h3>
+            <div id="signalsList" class="signals-list"></div>
+          </div>
+          <div id="nextStepsSection" class="result-section" hidden>
+            <h3>Possible next steps</h3>
+            <ol id="nextStepsList" class="next-steps-list"></ol>
+          </div>
+          <a class="verify-link" href="/static/verify.html">Open the verification guide <span aria-hidden="true">→</span></a>
+        </section>
+      </main>
+
+      <footer class="page-footer">
+        <span>PausePal</span>
+        <span>Take a breath. Take your time.</span>
+      </footer>
+    </div>
+  </body>
+</html>

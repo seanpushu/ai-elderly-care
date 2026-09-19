@@ -1,0 +1,11 @@
+modules = ["python-3.11"]
+run = "python -m pip install -r requirements.txt && python start.py"
+
+[deployment]
+build = ["sh", "-c", "python -m pip install -r requirements.txt"]
+run = ["sh", "-c", "python start.py"]
+deploymentTarget = "cloudrun"
+
+[[ports]]
+localPort = 8000
+externalPort = 80
