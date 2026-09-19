@@ -173,6 +173,7 @@ function renderSignals(signals, matched) {
   signals.forEach((signal, index) => {
     const item = document.createElement("article");
     item.className = "signal-item";
+    item.dataset.signalNumber = String(index + 1).padStart(2, "0");
 
     if (signal.quote.trim()) {
       const quoteElement = document.createElement("blockquote");

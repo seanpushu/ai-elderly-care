@@ -69,6 +69,12 @@ textarea:focus-visible,
 .eyebrow, .step-label, .note-kicker { margin: 0; color: var(--teal-dark); font-size: .85rem; font-weight: 800; letter-spacing: .12em; }
 .intro h1 { max-width: 760px; margin: 12px 0 14px; font-family: Georgia, "Times New Roman", serif; font-size: clamp(2.4rem, 6vw, 4.2rem); font-weight: 500; letter-spacing: -.045em; line-height: 1.05; }
 .intro-copy { max-width: 680px; margin: 0; color: var(--ink); font-size: 1.15rem; }
+.journey { display: flex; align-items: center; max-width: 610px; margin: 28px 0 0; padding: 0; list-style: none; color: var(--muted); font-size: .78rem; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; }
+.journey-step { display: inline-flex; align-items: center; gap: 8px; white-space: nowrap; }
+.journey-dot { width: 31px; height: 31px; display: grid; place-items: center; color: var(--navy); background: #e4ebe3; border: 1px solid #b8cbbd; border-radius: 50%; font-size: .7rem; letter-spacing: 0; }
+.journey-step.is-current { color: var(--teal-dark); }
+.journey-step.is-current .journey-dot { color: #fff; background: var(--teal); border-color: var(--teal); box-shadow: 0 0 0 5px rgb(40 109 99 / 12%); }
+.journey-line { width: 54px; height: 1px; margin: 0 12px; background: #b9c7bc; }
 
 .workspace { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 22px; align-items: stretch; }
 .review-card, .result-card, .error-card { padding: clamp(22px, 4vw, 40px); background: var(--paper); border: 1px solid rgb(30 52 69 / 7%); border-radius: 22px; box-shadow: var(--shadow); }
@@ -178,6 +184,7 @@ textarea:disabled { color: #4d5856; background: #f2f3ef; }
 
 .signals-list { display: grid; gap: 14px; }
 .signal-item { padding: 16px 18px; background: #fbf6ea; border-left: 5px solid #d98a2b; border-radius: 0 10px 10px 0; }
+.signal-item::before { display: block; margin-bottom: 8px; color: #9a681f; content: "SIGNAL " attr(data-signal-number); font-size: .72rem; font-weight: 850; letter-spacing: .12em; }
 .signal-quote { margin: 0 0 8px; padding: 0; color: var(--navy); font-family: Georgia, serif; font-size: 1.1rem; font-style: italic; white-space: pre-wrap; overflow-wrap: anywhere; }
 .signal-quote::before { content: "“"; }
 .signal-quote::after { content: "”"; }
@@ -207,6 +214,8 @@ textarea:disabled { color: #4d5856; background: #f2f3ef; }
   .intro { padding: 32px 0 24px; }
   .intro h1 { font-size: clamp(2.1rem, 11vw, 3rem); }
   .intro-copy { font-size: 1.05rem; }
+  .journey { width: 100%; justify-content: space-between; font-size: .68rem; }
+  .journey-line { flex: 1; width: auto; margin: 0 7px; }
   .review-card, .result-card, .error-card { padding: 22px 18px; border-radius: 17px; }
   .card-heading, .result-heading-row { flex-direction: column; gap: 10px; }
   .input-meta { flex-direction: column; gap: 4px; }
