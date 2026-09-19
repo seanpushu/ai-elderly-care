@@ -2,9 +2,9 @@
 
 PausePal helps older adults pause, understand warning signs, and verify urgent requests through people they already trust.
 
-## Starter status
+## Status
 
-This is a runnable hackathon starter. Analysis currently uses **explicitly labeled demo rules**, not a live AI model. Do not present demo outputs as verified scam detection. The backend teammate will add the real model integration.
+Analysis is **live**: every `POST /api/analyze` makes one real model call. There is no demo or rule-based fallback. If the model is not configured, times out, or returns something that fails validation, the API answers HTTP 503 with a short English message instead of a made-up result. Do not present any output as verified scam detection; PausePal describes pressure patterns and suggests independent verification.
 
 ## Run
 
@@ -15,7 +15,53 @@ python -m pip install -r requirements.txt
 python start.py
 ```
 
-Open port 8000. Replit Run and Autoscale publishing settings are in `.replit`. Health check: `/health`. API: `POST /api/analyze` with JSON `{"text":"Your message"}`. The trusted-contact page is `/static/verify.html`.
+The server binds `0.0.0.0` on `$PORT` (default 8000). Replit Run and Autoscale publishing settings are in `.replit`. Health check: `/health`. API: `POST /api/analyze` with JSON `{"text":"Your message"}`. The trusted-contact page is `/static/verify.html`.
+
+## AI backend configuration
+
+Confirmed provider: **Groq Chat Completions API** through the official `groq` Python package. Default model `openai/gpt-oss-20b`; one request per analysis, `max_retries=0`, 25-second timeout, and strict JSON-schema output.
+
+Credentials are read from the environment (set them as Replit Secrets; never commit values):
+
+| Variable | Purpose |
+| --- | --- |
+| `GROQ_API_KEY` | Required Groq API credential for live analysis. |
+| `GROQ_MODEL` (optional) | Override the Groq model; defaults to `openai/gpt-oss-20b`. |
+| `PAUSEPAL_MODEL_TIMEOUT_SECONDS` (optional) | Provider timeout, 1–60 seconds. |
+
+`GET /health` reports `analysis_available: false` when `GROQ_API_KEY` is absent. Development and production credentials are configured separately in Replit; the published app needs its own secret value.
+
+### Response contract
+
+```json
+{
+  "assessment": "warning | no_clear_signals | insufficient_information",
+  "summary": "English text",
+  "signals": [{"quote": "exact substring of the submitted text", "reason": "English text"}],
+  "next_steps": ["English text"],
+  "mode": "live"
+}
+```
+
+The server validates every model reply before returning it (`app/schemas.py`):
+- Assessment enum, field types, and lengths.
+- Every `signals[].quote` is an exact verbatim substring of the submitted text.
+- `insufficient_information` → no signals; `warning` → at least one signal.
+- All generated text must be in English (≥ 90 % Latin script, minimum English function words).
+- Verdict vocabulary is banned entirely: scam, fraud, phishing, legitimate, genuine, authentic, fake, impostor, cloned, AI-generated, and equivalents.
+- Probabilistic or soft estimates are banned: likely, probably, looks like, 85 %, percent, odds, and equivalents.
+- Authenticity/truth/"money is safe" verdicts are banned unless the same sentence first hedges with a word like *cannot tell*, *whether*, *verify*, etc.
+- `next_steps` may not contain phone numbers, URLs, or e-mail addresses; may not tell the user to reply, click, tap, scan, download, log in, or share a code; may not refer to any contact channel supplied by the message (even as a warning — move those observations to a signal reason instead); and may only name a channel noun (number, link, …) when also naming an independent source (already saved, on the back of your card, official, in person, …).
+
+Anything that fails is a 503 (`reason: invalid_output`). Logs record the failure reason and text length only — never the message or any key.
+
+### Tests
+
+```sh
+python -m unittest discover -s tests -v
+```
+
+`tests/test_api.py` mocks the provider call and covers HTTP-shaped requests, urgent/insufficient/prompt-injection messages, exact-quote preservation, request validation, provider timeout/transport/status failures, malformed model output, and the no-fallback rule. `tests/test_live_provider.py` performs a real round-trip and skips itself when no key is configured.
 
 ## Three-person development
 
