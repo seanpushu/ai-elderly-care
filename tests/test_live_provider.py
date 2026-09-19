@@ -1,7 +1,7 @@
 """One real round-trip against the configured provider.
 
 Skipped automatically when no credentials are present, so the normal suite
-stays offline. Run it deliberately after setting the key:
+stays offline. Run it deliberately after setting GROQ_API_KEY:
 
     python -m unittest tests.test_live_provider -v
 """
@@ -14,7 +14,7 @@ from app.analyzer import is_configured
 from tests.test_api import URGENT_TEXT, asgi_request
 
 
-@unittest.skipUnless(is_configured(), "no OpenAI credentials configured")
+@unittest.skipUnless(is_configured(), "no Groq credentials configured")
 class LiveProviderTests(unittest.IsolatedAsyncioTestCase):
     async def test_real_provider_round_trip(self) -> None:
         status, body, _ = await asgi_request("POST", "/api/analyze", {"text": URGENT_TEXT})
