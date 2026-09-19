@@ -13,7 +13,7 @@ import unittest
 from pathlib import Path
 from unittest.mock import AsyncMock, patch
 
-import httpx2
+import httpx
 from groq import APIConnectionError, APIStatusError, APITimeoutError
 
 import app.main as main_module
@@ -113,12 +113,12 @@ def model_output(**overrides: object) -> str:
     return json.dumps(payload)
 
 
-def _fake_request() -> httpx2.Request:
-    return httpx2.Request("POST", "https://api.groq.com/openai/v1/chat/completions")
+def _fake_request() -> httpx.Request:
+    return httpx.Request("POST", "https://api.groq.com/openai/v1/chat/completions")
 
 
 def _fake_status_error(status: int) -> APIStatusError:
-    response = httpx2.Response(status, request=_fake_request(), json={"error": {"message": "x"}})
+    response = httpx.Response(status, request=_fake_request(), json={"error": {"message": "x"}})
     return APIStatusError("provider error", response=response, body=None)
 
 
