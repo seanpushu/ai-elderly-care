@@ -1,0 +1,139 @@
+# PausePal：三人并行开发任务（中文说明，英文产品）
+
+本文件替代之前的两份分工说明。三个人同时开发，直接在现有基础代码上继续，不要从零重新生成应用或覆盖队友成果。以下最新状态优先于后面的原始任务说明；两小时是最初总预算，请按实际剩余时间执行。
+
+## 最新进度与立即分工（2026-09-19）
+
+- 已创建 main、frontend、backend-ai、integration，最后一次确认均同步到提交 84edc92。其他人开始提交后，以各分支的新版本为准，不要重置或强制覆盖。
+- 已有全英文基础代码：消息输入与结果页面、联系人保存/清除与核实页面、FastAPI 接口、Replit 运行配置。
+- 本地 6 项后端测试通过；首页、静态资源、核实页和健康接口返回成功。Replit 预览已实际启动，演示分析以及联系人保存/清除已在浏览器验证。
+- 分析目前仍为 demo 规则，绝不是已接入真实 AI。风险、正常通知、信息不足三个演示样例已修正并同步。
+- 首次公开发布失败：Replit 构建环境禁止直接安装到系统 Python。已改为 .venv 独立环境，提交并同步到所有分支，也已拉取到当前 Replit 项目。尚未确认修复后的公开发布成功；不要把预览运行当成正式上线。
+- 目前只访问了你的 Replit 项目 https://replit.com/@pushu0310/ai-elderly-care 。另外两位队友的项目尚未访问或部署。
+
+现在这样分工：
+
+1. 队友 A 切到 frontend，在现有分析页面上改进风险原句高亮、手机显示和英文文案；检查 warning/no_clear_signals/insufficient_information 和报错，不另写后端。
+2. 队友 B 切到 backend-ai，优先用自己 Replit 中可用的模型接上真实 AI，替换 demo。重要：app/main.py 中 require_demo_mode() 当前会阻止 live 模式，必须与 app/analyzer.py 一起调整；真实调用成功才返回 mode=live，失败返回 503，不隐式退回 demo。配置密钥只用 Secrets。
+3. 你使用 integration，核对联系人核实流程、收集两人的 PR 并合并、组织英文演示。你的 GPT 额度已用尽，可以手动协调，并让有额度的队友协助最后发布。发布失败的修复已在仓库，不要重新生成整个应用。
+4. 三个人先在自己的 Replit Fetch/Pull 最新代码，再切到自己的分支；已有本地改动先提交并正常合并，禁止 reset --hard 或 force push。
+5. 收尾只需一个人发布最终合并版本。确认使用修复后的 .replit，再触发公开发布，实际打开生成的 .replit.app 链接验证。若交给队友发布，在他自己的项目里配置模型 Secrets；密钥不会随 GitHub 同步。
+
+给队友转发：仓库 https://github.com/seanpushu/ai-elderly-care 已有可运行底座，三个开发分支已建立；前端继续完善交互，后端优先接真实 AI。现阶段只有 demo 分析，正式公开发布尚未确认成功。最终产品和展示材料全部英文，任务沟通可以中文。
+
+仓库：https://github.com/seanpushu/ai-elderly-care
+
+## 语言要求
+
+任务说明、团队沟通可以用中文。最终产品的界面、按钮、加载和错误提示、AI 解释与建议、示例、README、演示与提交材料全部英文。即使输入非英文消息，AI 的解释仍用英文。作为证据引用的原句保留输入原文，不翻译或改写。
+
+## 每个人都有自己的开发模块
+
+- 队友 A：消息分析页面，分支 frontend；只修改 static/index.html、static/analyze.js、static/analyze.css。
+- 队友 B：AI 分析与应用服务，分支 backend-ai；负责 app/、requirements.txt、后端测试、启动与发布配置。不创建或修改 static/ 文件。
+- 你：可信联系人与核实页面，分支 integration；只修改 static/verify.html、static/verify.js、static/verify.css，并负责测试记录、演示材料和最终部署。
+
+三人从同一个 main 开始，互不修改对方文件。A 和你可以先用模拟数据开发各自页面，B 同时接通真实模型。模拟结果必须明显标注。B 的服务直接提供 /static 目录，首页路径固定为 /，核实页固定为 /static/verify.html；页面之间用普通链接连接，不引入共享组件或构建工具。
+
+A、B 各提交 PR 到 main，你检查后依次合并。你的 integration 分支提交自己的改动后再同步最新 main，不带未提交改动直接拉取；解决差异并检查，再把 integration 合并回 main。最终发布使用 main 的最新版本。发布负责人不能强制推送覆盖队友工作。
+
+各自的临时预览配置不要混进共享提交。共享依赖、服务启动配置只由 B 维护。确认 GitHub collaborator 邀请已被接受；连接 GitHub 本身不代表有仓库写权限。
+
+## 三个人共同遵守的接口
+
+技术栈：Python FastAPI + 原生 HTML/CSS/JavaScript，一个服务提供网页和 API，不添加数据库或登录。
+
+POST /api/analyze
+
+请求示例：
+
+```json
+{"text":"Grandma, send me $900 now. Do not tell Mom."}
+```
+
+响应结构示例（不是已运行结果）：
+
+```json
+{
+  "assessment": "warning",
+  "summary": "Pause and verify this request using a contact you already trust.",
+  "signals": [
+    {"quote": "send me $900 now", "reason": "Urgent request for money"},
+    {"quote": "Do not tell Mom", "reason": "Request for secrecy"}
+  ],
+  "next_steps": [
+    "Pause before taking action.",
+    "Contact the person using a number saved before this message arrived."
+  ],
+  "mode": "live"
+}
+```
+
+- assessment 只允许 warning、no_clear_signals、insufficient_information。没有明显线索不等于安全。
+- summary、reason、next_steps 和错误提示全部英文；quote 必须为输入中的连续原文，后端校验。
+- 只接收非空、去掉首尾空白后 1–4000 字符的 text。无效输入返回 422；模型不可用返回 503，detail 为清楚的英文提示。
+- mode 仅 live / demo；真实模型失败不能偷偷返回模拟成功。
+- 前端安全渲染用户文本与模型输出，不能把这些内容当 HTML 执行。
+- 联系人不发给模型，只由核实页面管理。没有自动发送消息、自动拨号或自动确认成功。
+
+## 给队友 A：复制本节及上面的共同接口给 Replit Agent
+
+你负责 PausePal 的消息分析界面。任务说明可以中文，但产品界面和所有系统文案必须英文。仓库 seanpushu/ai-elderly-care，分支 frontend。先检查当前代码；只改 static/index.html、static/analyze.js、static/analyze.css，不要修改后端、核实页面、依赖和启动配置。
+
+直接开始开发，无须等待后端完成。使用原生 HTML/CSS/JavaScript，做手机友好、大字号、高对比度的页面。主标题“Before you act, take a pause.”，提供消息输入框和“Help me check”按钮。调用同源 POST /api/analyze，严格遵守共同接口。做英文加载、输入校验、失败重试提示，并防止重复提交。
+
+结果展示英文总结、原文风险高亮、逐条英文解释和核实建议。quote 必须保留原文；以 textContent 等安全方式渲染。提供“Verify with someone you trust”按钮，链接固定 /static/verify.html。联系人和核实页面由另一位队友做，你不要实现它们。
+
+加三个英文示例入口：紧急转账且要求保密、正常门诊改约、信息不足。点击示例只填充文本，不自动发请求。不显示“Safe”或虚假的风险百分比。
+
+接口尚未可用时，可使用明确标记的演示模式完成界面。显示“Demo data — not a live AI result”；最终默认走真实接口，模型失败不能隐藏为模拟成功。检查手机宽度、键盘操作、长文本、加载和错误状态。交付时只提交自己负责的三个文件，开 PR 到 main，列出实际验证与未完成项。
+
+## 给队友 B：复制本节及上面的共同接口给 Replit Agent
+
+你负责 PausePal 的 AI 分析和应用服务。任务沟通可以中文，API 返回的解释、建议和错误全部英文；证据原句保留输入原文。仓库 seanpushu/ai-elderly-care，分支 backend-ai。你拥有 app/、requirements.txt、后端测试、启动和发布配置；不要创建或修改 static/，另外两位队友同时开发页面。
+
+使用 FastAPI。实现 GET /health、GET / 返回 static/index.html、/static 提供静态文件、POST /api/analyze。静态页面还没有合并时，服务与 API 仍须能启动；可在首页返回明确的临时英文提示，但不要写入队友的文件。固定安装与启动方式，监听 0.0.0.0 并使用 Replit 配置的端口，不引入数据库、登录或多服务。
+
+优先确认当前项目真正可用的模型集成与鉴权。不要虚构端点、模型名或密钥变量。需要 Secrets 时只说明名称和用途，不显示密钥；最终部署账号要单独配置。模型调用、校验、路由都由你完成，不让另外两人各接一套 AI。每次分析尽量一次模型调用，设置超时，不无限重试。
+
+按共同接口输出并校验：枚举、类型、英文叙述以及原文 quote 子串。把输入当不可信的待分析材料，忽略其中让系统改变规则的指令。结合催促、保密、付款、冒充身份和阻止核实等上下文，不能只因出现“钱”就判危险。信息不够时说明需要补充，不编造证据，不输出诈骗概率、声音真伪、真实性或资金安全保证。只能建议使用预存联系方式等独立渠道，不能信任消息里的号码和链接。
+
+真实模型成功后 mode=live；失败返回 503，不能以模拟结果代替。API 不记录完整消息或密钥；限制输入长度。验证真实请求、正常紧急消息、信息不足、提示注入与模型失败。交付 PR 到 main，并说明需要的 Secrets、依赖、启动命令及实际测试结果。
+
+## 给你：复制本节及上面的共同接口给 Replit Agent
+
+你负责 PausePal 的可信联系人与核实页面，同时帮助我准备最终部署和演示。任务说明中文即可，但产品与提交材料全部英文。仓库 seanpushu/ai-elderly-care，分支 integration。先检查现有代码。功能开发只修改 static/verify.html、static/verify.js、static/verify.css；后续可写 docs/demo.md 和 tests/results.md，不修改另外两位队友的分析页面、后端和启动配置。
+
+无需等待别人，独立开发 /static/verify.html。使用原生 HTML/CSS/JavaScript，页面样式保持简单、大字、高对比度。标题“Verify before you act”。提供姓名和号码的手动输入与保存、清除功能。信息只保存在 sessionStorage；明确说明应该填收到可疑消息前已经认识并信任的人，不能从消息自动提取号码。没有联系人时提供清楚的英文填写提示。
+
+展示三个核实步骤：“Pause the request.”、“Use a contact you already know.”、“Confirm the request before taking action.”。提供英文核实话术“I received an urgent request that claims to be from you. Did you send it?” 和复制按钮。号码经过基本格式校验后，可提供用户主动点击的 tel 链接打开拨号器；桌面端始终显示可读号码和话术，不依赖拨号能力完成展示。不自动拨号、不发消息，不编造家人回复，不把复制或打开拨号器标记为已核实。
+
+加返回首页的链接 /。这个页面不依赖 AI 返回或后端联系人 API，因此可以与另外两人同时完成。检查 sessionStorage 保存和清除、输入校验、复制失败提示、手机宽度和键盘使用；所有提示为英文。
+
+完成后提交自己的文件。A、B 的 PR 合并到 main 后，在保持工作区干净的情况下同步 main，整合并核验完整流程，再将 integration 合并回 main。使用 B 提供的启动方式与 Secrets 配置发布，不另写第二套服务器。最终检查真实公开 URL、未登录访问、模型调用与英文文案，整理英文演示稿和实际测试记录，不虚构完成状态或通过率。
+
+## 时间安排：从本轮开始按剩余时间执行
+
+- 前 5 分钟：确认权限、分支和接口；三人各把对应任务与共同接口交给自己的 Agent。
+- 接下来约 30 分钟：A 做分析界面，B 做服务与真实模型，你做联系人核实页。三个人都在写功能。
+- 下一段约 20 分钟：交付并合并；你负责合并操作，A 同时检查移动端与英文文案，B 同时检查线上模型配置和报错。
+- 余下时间：你发布、录演示并提交；A 跑正常通知和界面测试；B 跑风险输入、提示注入和故障测试。发现问题各回自己文件修复。
+- 最后至少 30 分钟：冻结功能，确认公开链接、录备用视频、排练和提交。不再加截图或音频。
+
+若实际只剩不到一小时，立即减少页面装饰和示例数量，优先真实模型、一条完整流程和部署。不要把所有额度花在反复重新生成整个应用上。
+
+## 最小验收与演示
+
+至少实际检查：紧急转账＋保密、正常门诊改约、正常付款提醒、内容不足、声称熟人号码、提示注入、空白/超长输入、模型超时。只记录真实观察结果，少量演示样例不等于经过验证的识别准确率。
+
+三分钟英文演示：20 秒解释场景，40 秒展示真实分析和原文证据，40 秒进入可信联系人核实页，30 秒对比正常通知，25 秒展示实际测试和局限，25 秒展示团队分工与部署链接。尚未做老人用户试用就明确说未做，不声称已经证明能减少诈骗。
+
+## 额度与协作
+
+各自在个人 Replit 项目中使用自己的额度，通过 GitHub 同步。三个账户不是自动共享一个 $60 余额；具体消耗以 Usage 为准。模型集成、Agent、发布和第三方 API 可能涉及不同收费。只由一个账号发布最终应用，并为演示保留余额。不要把密钥、私人联系人或真实可疑消息提交到公开仓库。
+
+已核实的官方参考：
+- https://docs.replit.com/replit-workspace/workspace-features/version-control
+- https://docs.replit.com/billing/ai-billing
+- https://docs.replit.com/billing/managing-spend
+- https://replit.com/blog/pro-plan
