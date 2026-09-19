@@ -20,7 +20,7 @@ class LiveProviderTests(unittest.IsolatedAsyncioTestCase):
         status, body, _ = await asgi_request("POST", "/api/analyze", {"text": URGENT_TEXT})
         self.assertEqual(status, 200, body)
         self.assertEqual(body["mode"], "live")
-        self.assertIn(body["assessment"], ("warning", "no_clear_signals", "insufficient_information"))
+        self.assertEqual(body["assessment"], "warning")
         for signal in body["signals"]:
             self.assertIn(signal["quote"], URGENT_TEXT)
 
@@ -29,6 +29,7 @@ class LiveProviderTests(unittest.IsolatedAsyncioTestCase):
         status, body, _ = await asgi_request("POST", "/api/analyze", {"text": text})
         self.assertEqual(status, 200, body)
         self.assertEqual(body["mode"], "live")
+        self.assertEqual(body["assessment"], "no_clear_signals")
         for signal in body["signals"]:
             self.assertIn(signal["quote"], text)
 
