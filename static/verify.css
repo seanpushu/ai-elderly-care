@@ -1,1 +1,255 @@
-:root{font-family:system-ui,sans-serif;color:#15333a;background:#f7f6ef;font-size:19px}*{box-sizing:border-box}body{margin:0}main{max-width:780px;margin:auto;padding:32px 24px 70px}a{color:#15594f}h1{font-size:clamp(2rem,6vw,3.1rem);line-height:1.1;margin:18px 0}h2{font-size:1.35rem}.eyebrow{font-size:.75rem;letter-spacing:.13em;margin-top:40px;font-weight:700}.intro,li{line-height:1.6}li{padding:4px}section{background:white;border:1px solid #d5dfd7;border-radius:16px;margin-top:24px;padding:25px}label{display:block;font-weight:650;margin:18px 0 8px}input{width:100%;font:inherit;padding:13px;border:1px solid #798b85;border-radius:8px}.actions{display:flex;flex-wrap:wrap;gap:12px;margin-top:18px}button{font:inherit;font-weight:600;border:1px solid #195c50;border-radius:9px;background:#195c50;color:white;padding:13px 18px;cursor:pointer}.secondary{background:white;color:#195c50}button:focus-visible,a:focus-visible,input:focus-visible{outline:3px solid #cf8e24;outline-offset:3px}.note{font-size:.85rem;line-height:1.5;color:#48605f}#script{border-left:4px solid #b2c8bd;padding:8px 20px;line-height:1.6}#contact-status,#copy-status{line-height:1.5}#call{display:inline-block;margin-top:10px}#call[hidden]{display:none}
+/* ── Base ── */
+:root {
+  font-family: system-ui, -apple-system, sans-serif;
+  color: #15333a;
+  background: #f7f6ef;
+  font-size: 19px;
+}
+
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+}
+
+/* ── Layout ── */
+main {
+  max-width: 780px;
+  margin: 0 auto;
+  padding: 32px 24px 80px;
+}
+
+/* ── Links ── */
+a {
+  color: #15594f;
+}
+
+.back-link {
+  display: inline-block;
+  font-weight: 600;
+  text-decoration: none;
+  margin-bottom: 8px;
+}
+
+.back-link:hover {
+  text-decoration: underline;
+}
+
+/* ── Eyebrow label ── */
+.eyebrow {
+  font-size: 0.75rem;
+  letter-spacing: 0.13em;
+  margin-top: 40px;
+  margin-bottom: 0;
+  font-weight: 700;
+  color: #48605f;
+}
+
+/* ── Heading ── */
+h1 {
+  font-size: clamp(2rem, 6vw, 3.1rem);
+  line-height: 1.1;
+  margin: 14px 0 18px;
+}
+
+h2 {
+  font-size: 1.35rem;
+  margin-top: 0;
+  margin-bottom: 8px;
+}
+
+/* ── Body copy ── */
+.intro {
+  line-height: 1.6;
+  margin-bottom: 20px;
+  max-width: 640px;
+}
+
+/* ── Verification steps ── */
+.steps {
+  padding-left: 1.4em;
+  margin: 0 0 8px;
+}
+
+.steps li {
+  line-height: 1.6;
+  padding: 5px 0;
+  font-weight: 600;
+}
+
+/* ── Card sections ── */
+section {
+  background: #ffffff;
+  border: 1px solid #d5dfd7;
+  border-radius: 16px;
+  margin-top: 24px;
+  padding: 26px;
+}
+
+.section-note {
+  font-size: 0.9rem;
+  color: #48605f;
+  margin-top: 0;
+  margin-bottom: 16px;
+  line-height: 1.5;
+}
+
+/* ── Empty-state hint ── */
+.empty-hint {
+  background: #eef5f0;
+  border-left: 4px solid #5a9e87;
+  border-radius: 8px;
+  padding: 12px 16px;
+  font-size: 0.95rem;
+  line-height: 1.6;
+  margin-bottom: 20px;
+  color: #1a3e36;
+}
+
+.empty-hint strong {
+  font-weight: 700;
+}
+
+/* ── Form ── */
+label {
+  display: block;
+  font-weight: 650;
+  margin: 18px 0 8px;
+}
+
+label:first-of-type {
+  margin-top: 0;
+}
+
+input {
+  width: 100%;
+  font: inherit;
+  font-size: 1rem;
+  padding: 13px 14px;
+  border: 1.5px solid #798b85;
+  border-radius: 8px;
+  background: #fff;
+  color: inherit;
+  -webkit-appearance: none;
+}
+
+input:focus {
+  border-color: #195c50;
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(25, 92, 80, 0.18);
+}
+
+/* ── Button row ── */
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 20px;
+}
+
+/* ── Buttons ── */
+button {
+  font: inherit;
+  font-weight: 600;
+  font-size: 1rem;
+  border: 1.5px solid #195c50;
+  border-radius: 9px;
+  background: #195c50;
+  color: #ffffff;
+  padding: 13px 20px;
+  cursor: pointer;
+  line-height: 1.2;
+  touch-action: manipulation;
+}
+
+button:hover {
+  background: #13483e;
+  border-color: #13483e;
+}
+
+button.secondary {
+  background: #ffffff;
+  color: #195c50;
+}
+
+button.secondary:hover {
+  background: #eef5f0;
+}
+
+/* ── Focus rings (keyboard navigation) ── */
+button:focus-visible,
+a:focus-visible,
+input:focus-visible {
+  outline: 3px solid #cf8e24;
+  outline-offset: 3px;
+}
+
+/* ── Status messages ── */
+#contact-status,
+#copy-status {
+  line-height: 1.5;
+  min-height: 1.5em;
+  margin-top: 12px;
+  font-size: 0.95rem;
+}
+
+/* ── Tel link (call / dialer) ── */
+#call {
+  display: inline-block;
+  margin-top: 12px;
+  font-weight: 600;
+  word-break: break-all;
+}
+
+#call[hidden] {
+  display: none;
+}
+
+/* ── Verification script ── */
+#script {
+  border-left: 4px solid #b2c8bd;
+  padding: 10px 20px;
+  line-height: 1.7;
+  margin: 12px 0 18px;
+  font-size: 1.05rem;
+}
+
+/* ── Copy button ── */
+#copy {
+  margin-bottom: 4px;
+}
+
+/* ── Disclaimer note ── */
+.note {
+  font-size: 0.85rem;
+  line-height: 1.55;
+  color: #48605f;
+  margin-top: 16px;
+  margin-bottom: 0;
+}
+
+/* ── Mobile ── */
+@media (max-width: 480px) {
+  main {
+    padding: 24px 16px 80px;
+  }
+
+  h1 {
+    font-size: 2rem;
+  }
+
+  button {
+    width: 100%;
+    text-align: center;
+  }
+
+  .actions {
+    flex-direction: column;
+  }
+
+  input {
+    font-size: 1rem; /* prevent iOS zoom on focus */
+  }
+}
