@@ -19,18 +19,17 @@ The server binds `0.0.0.0` on `$PORT` (default 8000). Replit Run and Autoscale p
 
 ## AI backend configuration
 
-Confirmed provider: **OpenAI Chat Completions API** (`POST {base_url}/chat/completions`, Bearer-token auth, `json_schema` structured output) through the official `openai` Python package. Default model `gpt-4o-mini`; one request per analysis, `max_retries=0`, 25-second timeout.
+Confirmed provider: **Groq Chat Completions API** through the official `groq` Python package. Default model `openai/gpt-oss-20b`; one request per analysis, `max_retries=0`, 25-second timeout, and strict JSON-schema output.
 
-Credentials are read from the environment (set them as Replit Secrets; never commit values). Either set works:
+Credentials are read from the environment (set them as Replit Secrets; never commit values):
 
 | Variable | Purpose |
 | --- | --- |
-| `AI_INTEGRATIONS_OPENAI_API_KEY` + `AI_INTEGRATIONS_OPENAI_BASE_URL` | Replit AI Integrations (Replit-managed OpenAI billing). Checked first. |
-| `OPENAI_API_KEY` (+ optional `OPENAI_BASE_URL`) | Your own OpenAI key. |
-| `PAUSEPAL_MODEL` (optional) | Override the model name. |
+| `GROQ_API_KEY` | Required Groq API credential for live analysis. |
+| `GROQ_MODEL` (optional) | Override the Groq model; defaults to `openai/gpt-oss-20b`. |
 | `PAUSEPAL_MODEL_TIMEOUT_SECONDS` (optional) | Provider timeout, 1–60 seconds. |
 
-`GET /health` reports `analysis_available: false` when neither credential set is present. Development and production credentials are configured separately in Replit; the published app needs its own secret values.
+`GET /health` reports `analysis_available: false` when `GROQ_API_KEY` is absent. Development and production credentials are configured separately in Replit; the published app needs its own secret value.
 
 ### Response contract
 
