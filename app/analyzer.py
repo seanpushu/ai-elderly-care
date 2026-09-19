@@ -12,7 +12,7 @@ import os
 import re
 from typing import Any
 
-from openai import OpenAI
+from groq import Groq
 
 
 GROQ_BASE_URL = "https://api.groq.com/openai/v1"
@@ -173,9 +173,8 @@ async def analyze_live_message(text: str) -> dict[str, Any]:
     model = os.getenv("GROQ_MODEL", DEFAULT_GROQ_MODEL).strip() or DEFAULT_GROQ_MODEL
 
     def call_model() -> Any:
-        client = OpenAI(
+        client = Groq(
             api_key=api_key,
-            base_url=GROQ_BASE_URL,
             timeout=12.0,
             max_retries=0,
         )
