@@ -350,12 +350,63 @@ class PausePalApiTests(unittest.IsolatedAsyncioTestCase):
     # --- provider failures and the no-fallback rule ------------------------------------
 
     async def test_missing_configuration_is_a_503_not_a_demo(self) -> None:
-        with patch.dict(os.environ, NO_LIVE_ENV):
-            status, body, _ = await asgi_request("POST", "/api/analyze", {"text": URGENT_TEXT})
+        # Old demo trigger phrases, a short message, and a plain message all get the
+        # same 503: there is no keyword path left to fall back to.
+        texts = (
+            URGENT_TEXT,
+            "Please send me the code.",
+            "Please Do Not Tell your family about this request.",
+            "Transfer all funds to the new account today.",
+            "Hi!",
+            "I got your note this morning.",
+        )
+        for text in texts:
+            with patch.dict(os.environ, NO_LIVE_ENV):
+                status, body, _ = await asgi_request("POST", "/api/analyze", {"text": text})
+            self.assertEqual(status, 503, text)
+            self.assertEqual(body["reason"], "not_configured", text)
+            self.assertEqual(body["detail"], "Live analysis is not configured. An OpenAI API key is required.")
+            self.assertEqual(set(body), {"detail", "reason"}, text)
+            self.assertNotIn("demo", json.dumps(body), text)
+
+    async def test_partial_or_blank_configuration_counts_as_unconfigured(self) -> None:
+        partial_configs = (
+            {**NO_LIVE_ENV, "AI_INTEGRATIONS_OPENAI_API_KEY": "managed-key"},  # no base URL
+            {**NO_LIVE_ENV, "AI_INTEGRATIONS_OPENAI_BASE_URL": "https://example.invalid/v1"},  # no key
+            {**NO_LIVE_ENV, "OPENAI_API_KEY": "   "},  # whitespace only
+        )
+        for env in partial_configs:
+            with patch.dict(os.environ, env):
+                health_status, health_body, _ = await asgi_request("GET", "/health")
+                status, body, _ = await asgi_request("POST", "/api/analyze", {"text": URGENT_TEXT})
+            self.assertEqual(health_status, 200)
+            self.assertFalse(health_body["analysis_available"], env)
+            self.assertEqual(status, 503, env)
+            self.assertEqual(body["reason"], "not_configured", env)
+
+    async def test_unconfigured_requests_never_reach_the_provider(self) -> None:
+        mock = AsyncMock(return_value=model_output())
+        with patch.dict(os.environ, NO_LIVE_ENV), patch("app.analyzer.request_completion", mock):
+            status, _, _ = await asgi_request("POST", "/api/analyze", {"text": URGENT_TEXT})
         self.assertEqual(status, 503)
-        self.assertEqual(body["reason"], "not_configured")
-        self.assertIn("not configured", body["detail"])
-        self.assertNotIn("mode", body)
+        self.assertEqual(mock.await_count, 0)
+
+    async def test_mode_live_only_appears_on_validated_success(self) -> None:
+        outcomes = []
+        cases = {
+            "success": AsyncMock(return_value=model_output()),
+            "timeout": AsyncMock(side_effect=APITimeoutError(request=_fake_request())),
+            "bad_output": AsyncMock(return_value="not json"),
+            "bad_quote": AsyncMock(return_value=model_output(signals=[{"quote": "nope", "reason": "x"}])),
+        }
+        for label, mock in cases.items():
+            with patch.dict(os.environ, LIVE_ENV), patch("app.analyzer.request_completion", mock):
+                status, body, _ = await asgi_request("POST", "/api/analyze", {"text": URGENT_TEXT})
+            outcomes.append((label, status, body.get("mode")))
+        self.assertEqual(
+            outcomes,
+            [("success", 200, "live"), ("timeout", 503, None), ("bad_output", 503, None), ("bad_quote", 503, None)],
+        )
 
     async def test_provider_timeout_and_errors_return_503_without_retry(self) -> None:
         failures = {
